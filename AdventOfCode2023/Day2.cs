@@ -31,6 +31,26 @@ public class Day2
 
         return $"sum={sum}";
     }
+
+    public static string Part2(string[] input)
+    {
+        var games = input.Select(line => new Game(line));
+
+        var sum = 0;
+
+        foreach (var game in games)
+        {
+            var maxRed = game.Draws.Max(x => x.Red);
+            var maxGreen = game.Draws.Max(x => x.Green);
+            var maxBlue = game.Draws.Max(x => x.Blue);
+
+            var power = maxRed * maxGreen * maxBlue;
+
+            sum += power;
+        }
+
+        return $"sum={sum}";
+    }
 }
 
 file record Game
