@@ -11,35 +11,17 @@ public class Day3
 
         for (var i = 0; i < rows; i++)
         {
-            var currentNumber = "";
-
             for (var j = 0; j < columns; j++)
             {
-                var currentChar = input[i][j];
-
-                if (char.IsDigit(currentChar))
+                if (char.IsDigit(input[i][j]))
                 {
-                    currentNumber += currentChar;
-                }
-                else
-                {
-                    if (currentNumber != "")
-                    {
-                        if (HasAdjacentSymbol(i, j - currentNumber.Length, j - 1, input))
-                        {
-                            sum += int.Parse(currentNumber);
-                        }
+                    var currentNumber = "";
 
-                        currentNumber = "";
-                    }
-                }
-            }
+                    while (j < columns && char.IsDigit(input[i][j]))
+                        currentNumber += input[i][j++];
 
-            if (currentNumber != "")
-            {
-                if (HasAdjacentSymbol(i, columns - currentNumber.Length, columns - 1, input))
-                {
-                    sum += int.Parse(currentNumber);
+                    if (HasAdjacentSymbol(i, j - currentNumber.Length, j - 1, input))
+                        sum += int.Parse(currentNumber);
                 }
             }
         }
