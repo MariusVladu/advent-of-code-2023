@@ -18,6 +18,30 @@ public class Day4
         return $"sum={sum}";
     }
 
+    public static string Part2(string[] input)
+    {
+        var copies = new int[input.Length];
+
+        for (int i = 0; i < input.Length; i++)
+        {
+            var card = new Card(input[i]);
+            var winningNumbersCount = card.WinningNumbers.Intersect(card.Numbers).Count();
+
+            var totalCardInstancesCount = copies[i] + 1;
+
+            var k = i + 1;
+            while (winningNumbersCount > 0 && k < input.Length)
+            {
+                copies[k] += totalCardInstancesCount;
+                k++;
+                winningNumbersCount--;
+            }
+        }
+
+        var totalScratchcards = copies.Select(x => x + 1).Sum();
+
+        return $"total scratchcards = {totalScratchcards}";
+    }
 }
 
 file record Card
