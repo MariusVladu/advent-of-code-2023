@@ -3,6 +3,6 @@
 var input = File.ReadAllLines("input.txt");
 ArgumentNullException.ThrowIfNull(input);
 
-var result = Day4.Part2(input);
+var result = Day5.Part1(input);
 
 Console.WriteLine(result);
