@@ -11,6 +11,31 @@ public class Day5
 
         return $"closest location = {locations.Min()}";
     }
+
+    public static string Part2(string[] input)
+    {
+        var seeds = input[0].Split(':')[1].Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(long.Parse).ToArray();
+        var almanac = new Almanac(input);
+
+        var closestLocation = long.MaxValue;
+
+        for (int i = 0; i < seeds.Length; i += 2)
+        {
+            Console.WriteLine($"i={i}");
+
+            var start = seeds[i];
+            var range = seeds[i + 1];
+
+            for (var seed = start; seed < start + range; seed++)
+            {
+                var location = almanac.GetSeedLocationNumber(seed);
+                if (location < closestLocation)
+                    closestLocation = location;
+            }
+        }
+
+        return $"closest location = {closestLocation}";
+    }
 }
 
 file record Almanac
@@ -18,7 +43,7 @@ file record Almanac
     public Almanac(string[] input)
     {
         var lineIterator = input.AsEnumerable().GetEnumerator();
-        
+
         lineIterator.MoveNext();
 
         while (lineIterator.MoveNext())
