@@ -2,7 +2,7 @@
 
 public class Day7
 {
-    public static string Part1(string[] input)
+    public static string Part2(string[] input)
     {
         var camelCardsHands = input.Select(x => new CamelCards(x)).ToList();
         var orderedCamelCardsHands = camelCardsHands.OrderBy(x => x.Hand).ToList();
@@ -77,8 +77,23 @@ file class Hand : IComparable<Hand>
     {
         var cardGroups = Cards
             .GroupBy(card => card)
-            .Select(g => new { Card = g.Key, Count = g.Count() })
+            .Select(g => new CardGroup { Card = g.Key, Count = g.Count() })
             .ToList();
+
+        var jokerGroup = cardGroups.FirstOrDefault(g => g.Card.Symbol == 'J');
+        if (jokerGroup is not null)
+        {
+            cardGroups.Remove(jokerGroup);
+
+            if (cardGroups.Count == 0)
+                cardGroups.Add(new CardGroup { Card = new CamelCard('A'), Count = 5 });
+            else
+            {
+                var highestCountCardGroup = cardGroups.OrderByDescending(g => g.Count).ThenByDescending(g => g.Card.Symbol).First();
+
+                highestCountCardGroup.Count += jokerGroup.Count;
+            }
+        }
 
         if (cardGroups.Count == 1)
         {
@@ -113,22 +128,28 @@ file class Hand : IComparable<Hand>
             throw new Exception("Invalid hand");
         }
     }
+
+    private record CardGroup
+    {
+        public CamelCard Card { get; set; } = null!;
+        public int Count { get; set; }
+    }
 }
 
 file record CamelCard
 {
-    private static readonly char[] Cards = { 'A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2' };
+    private static readonly char[] Cards = { 'A', 'K', 'Q', 'T', '9', '8', '7', '6', '5', '4', '3', '2', 'J' };
 
     public CamelCard(char card)
     {
         if (!Cards.Contains(card))
             throw new Exception("Invalid card");
 
-        Card = card;
+        Symbol = card;
         Strength = Cards.Length - Array.IndexOf(Cards, card);
     }
 
-    public char Card { get; init; }
+    public char Symbol { get; init; }
     public int Strength { get; init; }
 }
 
