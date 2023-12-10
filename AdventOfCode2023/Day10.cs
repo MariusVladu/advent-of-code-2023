@@ -1,64 +1,19 @@
-﻿using System.ComponentModel.Design;
-using System.Data.Common;
-
-namespace AdventOfCode2023;
+﻿namespace AdventOfCode2023;
 
 public class Day10
 {
     public static string Part1(string[] input)
     {
-        var startingPoint = FindStartingPoint(input);
-
-        var steps = new long[input.Length, input[0].Length];
-        for (int i = 0; i < input.Length; i++)
-        {
-            for (int j = 0; j < input[0].Length; j++)
-            {
-                steps[i, j] = -1;
-            }
-        }
-
-        steps[startingPoint.I, startingPoint.J] = 0;
-
-        var positionsQueue = new Queue<Position>();
-        positionsQueue.Enqueue(startingPoint);
+        var steps = GetStepsMatrix(input);
 
         long maxSteps = 0;
 
-        while (positionsQueue.TryDequeue(out var currentPosition))
+        for (int i = 0; i < steps.GetLength(0); i++)
         {
-            var currentSymbol = input[currentPosition.I][currentPosition.J];
-            var currentSymbolAvailableConnections = FindAvailableConnectionsForPipe(currentSymbol, currentPosition.I, currentPosition.J);
-
-            var connectedPipes = new List<Position>();
-
-            foreach (var availableConnection in currentSymbolAvailableConnections)
+            for (int j = 0; j < steps.GetLength(1); j++)
             {
-                if (availableConnection.I < 0 || availableConnection.I >= input.Length)
-                    continue;
-
-                if (availableConnection.J < 0 || availableConnection.J >= input[0].Length)
-                    continue;
-
-                var alreadyVisited = steps[availableConnection.I, availableConnection.J] > -1;
-                if (alreadyVisited)
-                    continue;
-
-                var adjacentSymbol = input[availableConnection.I][availableConnection.J];
-                var adjacentSymbolPossibleConnections = FindAvailableConnectionsForPipe(adjacentSymbol, availableConnection.I, availableConnection.J);
-
-                if (adjacentSymbolPossibleConnections.Contains(currentPosition))
-                    connectedPipes.Add(availableConnection);
-            }
-
-            foreach (var connectedPipe in connectedPipes)
-            {
-                positionsQueue.Enqueue(connectedPipe);
-                var stepsToConnectedPipe = steps[currentPosition.I, currentPosition.J] + 1;
-                steps[connectedPipe.I, connectedPipe.J] = stepsToConnectedPipe;
-
-                if (stepsToConnectedPipe > maxSteps)
-                    maxSteps = stepsToConnectedPipe;
+                if (steps[i, j] > maxSteps)
+                    maxSteps = steps[i, j];
             }
         }
 
@@ -67,23 +22,57 @@ public class Day10
 
     public static string Part2(string[] input)
     {
+        var steps = GetStepsMatrix(input);
+        var enlarged = GetEnlargedMatrix(input, steps);
+
+        Print(enlarged, sleepMs: 100);
+
+        var tilesEnclosedByLoop = 0;
+
+        for (int i = 0; i < enlarged.GetLength(0); i++)
+        {
+            for (int j = 0; j < enlarged.GetLength(1); j++)
+            {
+                if (enlarged[i, j] != ' ')
+                    continue;
+
+                var tilesCluster = FindTilesCluster(enlarged, i, j);
+
+                var reachedOutside = tilesCluster.Any(tile => tile.I == 0 || tile.I == enlarged.GetLength(0) - 1 || tile.J == 0 || tile.J == enlarged.GetLength(1) - 1);
+                if (!reachedOutside)
+                {
+                    foreach (var tile in tilesCluster)
+                    {
+                        var isEnlargedTile = tile.I % 2 == 0 || tile.J % 2 == 0;
+
+                        if (!isEnlargedTile)
+                        {
+                            enlarged[tile.I, tile.J] = 'I';
+                            tilesEnclosedByLoop++;
+                        }
+                        else
+                            enlarged[tile.I, tile.J] = 'i';
+                    }
+                }
+
+                Print(enlarged, 500);
+            }
+        }
+
+        return $"Tiles enclosed by the loop: {tilesEnclosedByLoop}";
+    }
+
+    private static long[,] GetStepsMatrix(string[] input)
+    {
         var startingPoint = FindStartingPoint(input);
 
         var steps = new long[input.Length, input[0].Length];
-        for (int i = 0; i < input.Length; i++)
-        {
-            for (int j = 0; j < input[0].Length; j++)
-            {
-                steps[i, j] = -1;
-            }
-        }
+        InitMatrix(steps, -1);
 
         steps[startingPoint.I, startingPoint.J] = 0;
 
         var positionsQueue = new Queue<Position>();
         positionsQueue.Enqueue(startingPoint);
-
-        long maxSteps = 0;
 
         while (positionsQueue.TryDequeue(out var currentPosition))
         {
@@ -116,43 +105,27 @@ public class Day10
                 positionsQueue.Enqueue(connectedPipe);
                 var stepsToConnectedPipe = steps[currentPosition.I, currentPosition.J] + 1;
                 steps[connectedPipe.I, connectedPipe.J] = stepsToConnectedPipe;
-
-                if (stepsToConnectedPipe > maxSteps)
-                    maxSteps = stepsToConnectedPipe;
             }
         }
 
+        return steps;
+    }
 
-        var enlarged = new List<List<char>>();
+    private static char[,] GetEnlargedMatrix(string[] input, long[,] steps)
+    {
+        var enlarged = new char[2 * input.Length + 1, 2 * input[0].Length];
+        InitMatrix(enlarged, ' ');
 
         for (int i = 0; i < input.Length; i++)
         {
-            enlarged.Add(new List<char>());
             for (int j = 0; j < input[0].Length; j++)
             {
-                enlarged.Last().Add(' ');
-                enlarged.Last().Add(' ');
+                if (steps[i, j] != -1)
+                    enlarged[i * 2 + 1, j * 2 + 1] = input[i][j];
             }
-            enlarged.Last().Add(' ');
-
-            enlarged.Add(new List<char>());
-            for (int j = 0; j < input[0].Length; j++)
-            {
-                enlarged.Last().Add(' ');
-                enlarged.Last().Add(steps[i, j] != -1 ? input[i][j] : ' ');
-            }
-            enlarged.Last().Add(' ');
         }
 
-        enlarged.Add(new List<char>());
-        for (int j = 0; j < input[0].Length; j++)
-        {
-            enlarged.Last().Add(' ');
-            enlarged.Last().Add(' ');
-        }
-        enlarged.Last().Add(' ');
-
-        Print(enlarged);
+        Print(enlarged, sleepMs: 100);
 
         for (int i = 0; i < input.Length; i++)
         {
@@ -167,93 +140,51 @@ public class Day10
                 var e = new Position(i, j + 1);
 
                 if (!IsOutsideMatrix(n, input) && AreConnectedInMainLoop(currentPosition, n, steps))
-                    enlarged[enlargedCurrentPosition.I - 1][enlargedCurrentPosition.J] = '|';
+                    enlarged[enlargedCurrentPosition.I - 1, enlargedCurrentPosition.J] = '|';
 
                 if (!IsOutsideMatrix(s, input) && AreConnectedInMainLoop(currentPosition, s, steps))
-                    enlarged[enlargedCurrentPosition.I + 1][enlargedCurrentPosition.J] = '|';
+                    enlarged[enlargedCurrentPosition.I + 1, enlargedCurrentPosition.J] = '|';
 
                 if (!IsOutsideMatrix(w, input) && AreConnectedInMainLoop(currentPosition, w, steps))
-                    enlarged[enlargedCurrentPosition.I][enlargedCurrentPosition.J - 1] = '-';
+                    enlarged[enlargedCurrentPosition.I, enlargedCurrentPosition.J - 1] = '-';
 
                 if (!IsOutsideMatrix(e, input) && AreConnectedInMainLoop(currentPosition, e, steps))
-                    enlarged[enlargedCurrentPosition.I][enlargedCurrentPosition.J + 1] = '-';
+                    enlarged[enlargedCurrentPosition.I, enlargedCurrentPosition.J + 1] = '-';
 
                 Print(enlarged, sleepMs: 100);
             }
         }
 
-        Print(enlarged);
+        return enlarged;
+    }
 
+    private static List<Position> FindTilesCluster(char[,] enlarged, int i, int j)
+    {
+        var queue = new Queue<Position>();
+        queue.Enqueue(new Position(i, j));
 
+        var tilesCluster = new List<Position>();
 
-        var visitedTiles = new bool[enlarged.Count, enlarged[0].Count];
-
-        for (int i = 0; i < enlarged.Count; i++)
+        while (queue.TryDequeue(out var currentTile))
         {
-            for (int j = 0; j < enlarged[0].Count; j++)
-            {
-                if (enlarged[i][j] != ' ')
-                    continue;
+            if (IsOutsideMatrix(currentTile, enlarged))
+                continue;
 
-                var queue = new Queue<Position>();
-                queue.Enqueue(new Position(i, j));
+            if (enlarged[currentTile.I, currentTile.J] != ' ')
+                continue;
 
-                var tilesCluster = new List<Position>();
+            tilesCluster.Add(currentTile);
+            enlarged[currentTile.I, currentTile.J] = 'O';
 
-                while (queue.TryDequeue(out var currentTile))
-                {
-                    if (IsOutsideMatrix(currentTile, enlarged))
-                        continue;
+            queue.Enqueue(new Position(currentTile.I - 1, currentTile.J));
+            queue.Enqueue(new Position(currentTile.I + 1, currentTile.J));
+            queue.Enqueue(new Position(currentTile.I, currentTile.J - 1));
+            queue.Enqueue(new Position(currentTile.I, currentTile.J + 1));
 
-                    if (visitedTiles[currentTile.I, currentTile.J])
-                        continue;
-
-                    if (enlarged[currentTile.I][currentTile.J] != ' ')
-                        continue;
-
-                    tilesCluster.Add(currentTile);
-                    visitedTiles[currentTile.I, currentTile.J] = true;
-
-                    enlarged[currentTile.I][currentTile.J] = 'O';
-
-                    var n = new Position(currentTile.I - 1, currentTile.J);
-                    var s = new Position(currentTile.I + 1, currentTile.J);
-                    var w = new Position(currentTile.I, currentTile.J - 1);
-                    var e = new Position(currentTile.I, currentTile.J + 1);
-
-                    queue.Enqueue(n); queue.Enqueue(s); queue.Enqueue(w); queue.Enqueue(e);
-
-                    Print(enlarged, 50);
-                }
-
-                var reachedOutside = tilesCluster.Any(tile => tile.I == 0 || tile.I == enlarged.Count - 1 || tile.J == 0 || tile.J == enlarged[0].Count - 1);
-                if (!reachedOutside)
-                    tilesCluster.ForEach(tile => enlarged[tile.I][tile.J] = 'I');
-
-                Print(enlarged, 500);
-            }
+            Print(enlarged, 50);
         }
 
-        var tilesEnclosedByLoop = 0;
-        for (int i = 0; i < enlarged.Count; i++)
-        {
-            for (int j = 0; j < enlarged[0].Count; j++)
-            {
-                var isEnlargedTile = i % 2 == 0 || j % 2 == 0;
-
-                if (enlarged[i][j] == 'I')
-                {
-                    if (!isEnlargedTile)
-                        tilesEnclosedByLoop++;
-                    else
-                        enlarged[i][j] = 'i';
-                }
-            }
-        }
-
-        Print(enlarged);
-
-        return $"Tiles enclosed by the loop: {tilesEnclosedByLoop}";
+        return tilesCluster;
     }
 
     private static bool IsOutsideMatrix(Position position, string[] matrix)
@@ -261,9 +192,9 @@ public class Day10
         return position.I < 0 || position.I >= matrix.Length || position.J < 0 || position.J >= matrix[0].Length;
     }
 
-    private static bool IsOutsideMatrix(Position position, List<List<char>> matrix)
+    private static bool IsOutsideMatrix(Position position, char[,] matrix)
     {
-        return position.I < 0 || position.I >= matrix.Count || position.J < 0 || position.J >= matrix[0].Count;
+        return position.I < 0 || position.I >= matrix.GetLength(0) || position.J < 0 || position.J >= matrix.GetLength(1);
     }
 
     private static bool AreConnectedInMainLoop(Position p1, Position p2, long[,] steps)
@@ -336,29 +267,39 @@ public class Day10
         return new Position(0, 0);
     }
 
-    private static void Print(List<List<char>> matrix, int sleepMs = 0)
+    private static void Print(char[,] matrix, int sleepMs = 0)
     {
-        // clear console
         Console.Clear();
 
-        for (int i = 0; i < matrix[0].Count; i++)
+        for (int i = 0; i < matrix.GetLength(1); i++)
             Console.Write('-');
         Console.WriteLine();
 
-        for (int i = 0; i < matrix.Count; i++)
+        for (int i = 0; i < matrix.GetLength(0); i++)
         {
-            for (int j = 0; j < matrix[0].Count; j++)
-                Console.Write(matrix[i][j]);
+            for (int j = 0; j < matrix.GetLength(1); j++)
+                Console.Write(matrix[i, j]);
 
             Console.WriteLine();
         }
 
-        for (int i = 0; i < matrix[0].Count; i++)
+        for (int i = 0; i < matrix.GetLength(1); i++)
             Console.Write('-');
         Console.WriteLine();
 
         if (sleepMs > 0)
             Thread.Sleep(sleepMs);
+    }
+
+    private static void InitMatrix<T>(T[,] matrix, T value)
+    {
+        for (int i = 0; i < matrix.GetLength(0); i++)
+        {
+            for (int j = 0; j < matrix.GetLength(1); j++)
+            {
+                matrix[i, j] = value;
+            }
+        }
     }
 
     private record struct Position(int I, int J);
