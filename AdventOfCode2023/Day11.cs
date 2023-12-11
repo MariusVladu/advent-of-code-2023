@@ -1,15 +1,11 @@
-﻿
-using System.Collections.Concurrent;
-
-namespace AdventOfCode2023;
+﻿namespace AdventOfCode2023;
 
 public class Day11
 {
-    public static string Part1(string[] input)
+    public static string Part1(string[] input, int expansion = 1)
     {
-        Utils.Print(input, sleepMs: 250);
-        var image = ApplyCosmicExpansion(input);
-        Utils.Print(image, sleepMs: 250);
+        var image = Utils.To2DimensionalArray(input);
+        var (rowsToExpand, columnsToExpand) = DetectCosmicExpansion(input);
 
         var galaxies = new List<Position>();
 
@@ -31,7 +27,7 @@ public class Day11
                 if (i == j)
                     continue;
 
-                distances[i, j] = GetDistance(galaxies[i], galaxies[j], image);
+                distances[i, j] = GetDistance(galaxies[i], galaxies[j], image, rowsToExpand, columnsToExpand, expansion);
             }
         });
 
@@ -50,7 +46,12 @@ public class Day11
         return sum.ToString();
     }
 
-    private static char[,] ApplyCosmicExpansion(string[] input)
+    public static string Part2(string[] input)
+    {
+        return Part1(input, expansion: 999999);
+    }
+
+    private static (List<int> rowsToExpand, List<int> columnsToExpand) DetectCosmicExpansion(string[] input)
     {
         var expandedImage = new List<List<char>>();
 
@@ -82,26 +83,10 @@ public class Day11
                 columnsToExpand.Add(j);
         }
 
-        for (int i = 0; i < input.Length; i++)
-        {
-            var row = new List<char>();
-
-            for (int j = 0; j < input[0].Length; j++)
-            {
-                row.Add(input[i][j]);
-                if (columnsToExpand.Contains(j))
-                    row.Add(input[i][j]);
-            }
-
-            expandedImage.Add(row);
-            if (rowsToExpand.Contains(i))
-                expandedImage.Add(new List<char>(row));
-        }
-
-        return Utils.To2DimensionalArray(expandedImage);
+        return (rowsToExpand, columnsToExpand);
     }
 
-    private static Distance GetDistance(Position from, Position to, char[,] image)
+    private static Distance GetDistance(Position from, Position to, char[,] image, List<int> rowsToExpand, List<int> columnsToExpand, int expansion)
     {
         int[,] distances = new int[image.GetLength(0), image.GetLength(1)];
         Utils.InitMatrix(distances, -1);
@@ -120,6 +105,13 @@ public class Day11
                 continue;
 
             var currentDistance = current.prevDist + 1;
+
+            if (rowsToExpand.Contains(currentPosition.I))
+                currentDistance += expansion;
+
+            if (columnsToExpand.Contains(currentPosition.J))
+                currentDistance += expansion;
+
             distances[currentPosition.I, currentPosition.J] = currentDistance;
 
             if (currentPosition == to)
